@@ -11,6 +11,9 @@ const DUMMY_PASSWORD_HASH = "$2b$10$U.2TjU5A1vGXYl9iWp0x2e0.gNxtiH/P2e2S1xYXg5S2
 
 export async function POST(req: Request) {
     try {
+        // TODO: Implement rate limiting (e.g., redis-based IP throttling) before public 
+        // deployment to mitigate brute-force authentication attempts.
+
         const body = await req.json();
 
         // Validate request body
@@ -59,7 +62,7 @@ export async function POST(req: Request) {
             value: token,
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            sameSite: "strict",
             maxAge: 60 * 60 * 24, // 24 hours
             path: "/",
         });

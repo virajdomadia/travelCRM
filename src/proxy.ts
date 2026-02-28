@@ -11,7 +11,7 @@ export async function proxy(request: NextRequest) {
 
     // Check if the path matches any of our protected routes
     const isProtectedPath = protectedPaths.some(
-        (path) => pathname.startsWith(path)
+        (path) => pathname === path || pathname.startsWith(path + "/")
     );
 
     if (isProtectedPath) {
@@ -38,7 +38,9 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL("/dashboard", request.url));
             }
 
-            // Attach user info to headers for downstream use if needed
+            // Attach user info to headers for downstream use
+            // Note: Downstream APIs should trust these headers because they are overwritten 
+            // here by the middleware, preventing client forgery attacks.
             // (Next.js doesn't allow attaching directly to req in middleware)
             const requestHeaders = new Headers(request.headers);
             requestHeaders.set("x-user-id", payload.userId);

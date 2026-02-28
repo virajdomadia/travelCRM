@@ -21,7 +21,9 @@ export async function GET() {
             return NextResponse.json({ message: "Test user already exists" });
         }
 
-        const hashedPassword = await bcrypt.hash("password123", 10);
+        const devPassword = process.env.DEV_ADMIN_PASSWORD || crypto.randomUUID();
+        console.log(`[SETUP] SUPER_ADMIN Password: ${devPassword}`);
+        const hashedPassword = await bcrypt.hash(devPassword, 10);
 
         const user = await prisma.user.create({
             data: {
