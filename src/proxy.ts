@@ -31,7 +31,6 @@ export async function proxy(request: NextRequest) {
         if (!token) {
             // Redirect to login if no token is found
             const loginUrl = new URL("/login", request.url);
-            loginUrl.searchParams.set("callbackUrl", pathname);
             return NextResponse.redirect(loginUrl);
         }
 
@@ -94,7 +93,6 @@ export async function proxy(request: NextRequest) {
         } catch (error) {
             // Token is invalid or expired
             const loginUrl = new URL("/login", request.url);
-            loginUrl.searchParams.set("callbackUrl", pathname);
             // Delete the invalid cookie as part of the redirect
             const response = NextResponse.redirect(loginUrl);
             response.cookies.delete("auth-token");
