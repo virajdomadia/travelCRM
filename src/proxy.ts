@@ -49,7 +49,13 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL("/dashboard", request.url));
             }
 
-            // --- TENANT & SUBSCRIPTION ENFORCEMENT (Phase 1) ---
+            // --- USER ACCOUNT & TENANT & SUBSCRIPTION ENFORCEMENT ---
+
+            // 0. Check if user's own account is active (no DB hit — stored in JWT)
+            if (payload.userIsActive === false) {
+                return NextResponse.redirect(new URL("/login?error=account_deactivated", request.url));
+            }
+
             if (payload.agencyId) {
                 // 1. Check if agency is deactivated
                 if (payload.agencyIsActive === false) {

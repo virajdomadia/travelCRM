@@ -11,6 +11,7 @@ export interface JwtPayload {
     userId: string;
     email: string;
     role: string;
+    userIsActive?: boolean;    // user's own isActive status
     agencyId?: string;
     agencyIsActive?: boolean;
     subscriptionEnds?: string | null;

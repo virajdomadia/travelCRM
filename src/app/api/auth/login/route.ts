@@ -108,11 +108,11 @@ export async function POST(req: Request) {
             ] : []) // Cannot log agencyId if SUPER_ADMIN without an agency
         ]);
 
-        // Create short-lived JWT token (15 mins)
         const token = await signToken({
             userId: user.id,
             email: user.email,
             role: user.role,
+            userIsActive: user.isActive,
             agencyId: user.agencyId || undefined,
             agencyIsActive: user.agency?.isActive,
             subscriptionEnds: user.agency?.subscriptionEnds?.toISOString() || null,
