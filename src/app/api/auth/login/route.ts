@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import prisma from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { signToken } from "@/lib/auth";
+import { createSession } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Use a constant dummy hash to mitigate timing-based enumeration attacks when user is not found.
 // This is the result of bcrypt.hash("dummy", 10).
@@ -11,8 +13,15 @@ const DUMMY_PASSWORD_HASH = "$2b$10$U.2TjU5A1vGXYl9iWp0x2e0.gNxtiH/P2e2S1xYXg5S2
 
 export async function POST(req: Request) {
     try {
-        // TODO: Implement rate limiting (e.g., redis-based IP throttling) before public 
-        // deployment to mitigate brute-force authentication attempts.
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+
+        // 5 attempts per 15 minutes
+        if (!checkRateLimit(ip, 5, 15 * 60 * 1000)) {
+            return NextResponse.json(
+                { message: "Too many login attempts. Please try again later." },
+                { status: 429 }
+            );
+        }
 
         const body = await req.json();
 
@@ -22,6 +31,7 @@ export async function POST(req: Request) {
         // Find the user by email
         const user = await prisma.user.findUnique({
             where: { email },
+            include: { agency: true },
         });
 
         if (!user) {
@@ -34,21 +44,36 @@ export async function POST(req: Request) {
         }
 
         // Compare provided password with stored hash
-        const passwordMatch = await bcrypt.compare(password, user.password);
+        const isValidPassword = await bcrypt.compare(password, user.password);
 
-        if (!passwordMatch) {
+        if (!isValidPassword) {
             return NextResponse.json(
                 { message: "Invalid email or password" },
                 { status: 401 }
             );
         }
 
-        // Create JWT token
+        if (!user.isActive) {
+            return NextResponse.json(
+                { message: "Your account is deactivated." },
+                { status: 403 }
+            );
+        }
+
+        // Create short-lived JWT token (15 mins)
         const token = await signToken({
             userId: user.id,
             email: user.email,
             role: user.role,
+            agencyId: user.agencyId || undefined,
+            agencyIsActive: user.agency?.isActive,
+            subscriptionEnds: user.agency?.subscriptionEnds?.toISOString() || null,
         });
+
+        // Create long-lived Refresh Token (7 days)
+        const userAgent = req.headers.get("user-agent") || "Unknown";
+        // ip is already defined above, so we reuse it.
+        const refreshToken = await createSession(user.id, userAgent, ip);
 
         // Create response
         const response = NextResponse.json(
@@ -56,15 +81,27 @@ export async function POST(req: Request) {
             { status: 200 }
         );
 
-        // Set HTTP-only cookie
+        // Set short-lived Access Token Cookie
         response.cookies.set({
             name: "auth-token",
             value: token,
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
-            maxAge: 60 * 60 * 24, // 24 hours
+            maxAge: 60 * 15, // 15 minutes
             path: "/",
+        });
+
+        // Set long-lived Refresh Token Cookie
+        response.cookies.set({
+            name: "travelos_refresh",
+            value: refreshToken,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: "/",
+            // /api/auth path limitation could be used here, but we'll stick to / for ease of edge proxy usage
         });
 
         return response;

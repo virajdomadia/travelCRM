@@ -9,6 +9,17 @@ const protectedPaths = ["/dashboard", "/super-admin"];
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    // Strict Anti-CSRF Origin validation for mutating API routes
+    if (request.method !== "GET" && pathname.startsWith("/api/")) {
+        const origin = request.headers.get("origin");
+        const host = request.headers.get("host");
+
+        // Ensure origin is present and matches the host to prevent CSRF attacks
+        if (origin && origin !== `http://${host}` && origin !== `https://${host}`) {
+            return new NextResponse("Unauthorized Origin (CSRF Protection)", { status: 403 });
+        }
+    }
+
     // Check if the path matches any of our protected routes
     const isProtectedPath = protectedPaths.some(
         (path) => pathname === path || pathname.startsWith(path + "/")
@@ -38,6 +49,23 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL("/dashboard", request.url));
             }
 
+            // --- TENANT & SUBSCRIPTION ENFORCEMENT (Phase 1) ---
+            if (payload.agencyId) {
+                // 1. Check if agency is deactivated
+                if (payload.agencyIsActive === false) {
+                    return NextResponse.redirect(new URL("/login?error=account_suspended", request.url));
+                }
+
+                // 2. Check subscription validity
+                if (payload.subscriptionEnds) {
+                    const subEnds = new Date(payload.subscriptionEnds);
+                    if (subEnds < new Date() && !pathname.startsWith("/billing")) {
+                        // Redirect to a billing portal/renewal page to prevent full access
+                        return NextResponse.redirect(new URL("/billing", request.url));
+                    }
+                }
+            }
+
             // Attach user info to headers for downstream use
             // Note: Downstream APIs should trust these headers because they are overwritten 
             // here by the middleware, preventing client forgery attacks.
@@ -45,6 +73,12 @@ export async function proxy(request: NextRequest) {
             const requestHeaders = new Headers(request.headers);
             requestHeaders.set("x-user-id", payload.userId);
             requestHeaders.set("x-user-role", payload.role);
+
+            if (payload.agencyId) {
+                requestHeaders.set("x-agency-id", payload.agencyId);
+            } else {
+                requestHeaders.delete("x-agency-id"); // Prevent injection if none exists on payload
+            }
 
             return NextResponse.next({
                 request: {

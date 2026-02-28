@@ -30,7 +30,17 @@ model User {
   
   agencyId  String?
   agency    Agency?  @relation(fields: [agencyId], references: [id])
-  leads     Lead[]
+  
+  isActive  Boolean  @default(true)
+  
+  sessions  Session[]
+  auditLogs AuditLog[]
+  
+  assignedLeads Lead[] @relation("LeadAssignedTo")
+  createdLeads  Lead[] @relation("LeadCreatedBy")
+
+  @@index([agencyId])
+  @@index([role])
 }
 
 model Agency {
@@ -45,22 +55,91 @@ model Agency {
 
   users            User[]
   leads            Lead[]
+  clients          Client[]
+  bookings         Booking[]
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([subscriptionEnds])
 }
 
 model Lead {
   id           String     @id @default(uuid())
-  firstName    String
-  lastName     String
-  email        String?
+  name         String
   phone        String?
+  email        String?
+  source       String?
   status       LeadStatus @default(NEW)
   
   agencyId     String
-  agency       Agency     @relation(fields: [agencyId], references: [id])
+  agency       Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
   assignedToId String?
-  assignedTo   User?      @relation(fields: [assignedToId], references: [id])
+  assignedTo   User?      @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
   
+  createdById  String?
+  createdBy    User?      @relation("LeadCreatedBy", fields: [createdById], references: [id])
+
+  followUpDate DateTime?
+
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
+  @@index([agencyId, status])
+  @@index([agencyId, assignedToId])
+  @@index([agencyId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  agencyId   String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([userId])
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashedToken String   @unique
+  familyId    String
+  isRevoked   Boolean  @default(false)
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  title     String
+  
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
 }
