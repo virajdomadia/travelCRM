@@ -1,9 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 
-// Use a fallback secret for development; in production, always provide a strong JWT_SECRET
-const secret = new TextEncoder().encode(
-    process.env.JWT_SECRET || "fallback_secret_for_development_purposes_only_changeme"
-);
+if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not defined");
+}
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface JwtPayload {
     userId: string;

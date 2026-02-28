@@ -36,9 +36,16 @@ export default function LoginPage() {
                 throw new Error(data.message || "Something went wrong");
             }
 
-            // Successful login, redirect to dashboard
-            // Based on role we can optionally redirect differently, but for now /dashboard
-            router.push("/dashboard");
+            // Check for callbackUrl in the query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const callbackUrl = urlParams.get("callbackUrl");
+
+            if (callbackUrl && callbackUrl.startsWith("/")) {
+                router.push(callbackUrl);
+            } else {
+                router.push("/dashboard");
+            }
+
             router.refresh();
         } catch (err: unknown) {
             if (err instanceof z.ZodError) {

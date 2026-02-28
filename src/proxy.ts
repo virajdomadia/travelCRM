@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
+import { Role } from "@/lib/roles";
 
 // Add paths that require authentication here
 const protectedPaths = ["/dashboard", "/super-admin"];
@@ -32,7 +33,7 @@ export async function proxy(request: NextRequest) {
             }
 
             // Check role-based access for super-admin routes
-            if (pathname.startsWith("/super-admin") && payload.role !== "SUPER_ADMIN") {
+            if (pathname.startsWith("/super-admin") && payload.role !== Role.SUPER_ADMIN) {
                 // Regular users trying to access super-admin area get redirected to dashboard
                 return NextResponse.redirect(new URL("/dashboard", request.url));
             }
@@ -67,7 +68,7 @@ export async function proxy(request: NextRequest) {
                 const payload = await verifyToken(token);
                 if (payload) {
                     // Send them to the right dashboard based on role
-                    if (payload.role === "SUPER_ADMIN") {
+                    if (payload.role === Role.SUPER_ADMIN) {
                         return NextResponse.redirect(new URL("/super-admin", request.url));
                     }
                     return NextResponse.redirect(new URL("/dashboard", request.url));
