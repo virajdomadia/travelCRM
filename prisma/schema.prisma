@@ -36,6 +36,7 @@ model User {
   failedLoginAttempts Int      @default(0)
   lockUntil           DateTime?
   lastLoginAt         DateTime?
+  deletedAt           DateTime?
   
   sessions  Session[]
   auditLogs AuditLog[]
@@ -83,7 +84,7 @@ model Lead {
   status       LeadStatus @default(NEW)
   
   agencyId     String
-  agency       Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency       Agency     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
   
   assignedToId String?
   assignedTo   User?      @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
@@ -95,7 +96,7 @@ model Lead {
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  isDeleted    Boolean    @default(false)
+  deletedAt    DateTime?
   
   notes        LeadNote[]
 
@@ -111,9 +112,10 @@ model LeadNote {
   createdById String
   content     String
   createdAt   DateTime @default(now())
+  deletedAt   DateTime?
 
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
   createdBy   User     @relation(fields: [createdById], references: [id])
 
   @@index([leadId])
@@ -132,8 +134,8 @@ model AuditLog {
   userAgent  String?
   createdAt  DateTime @default(now())
 
-  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([agencyId])
   @@index([userId])
@@ -161,7 +163,9 @@ model Client {
   name      String
   
   agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
 
   @@index([agencyId])
 }
@@ -171,7 +175,9 @@ model Booking {
   title     String
   
   agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
 
   @@index([agencyId])
 }

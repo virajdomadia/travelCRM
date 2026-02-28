@@ -3,8 +3,7 @@ import { Prisma } from "@prisma/client";
 
 /**
  * LeadRepository strictly enforces tenant context for all Lead interactions.
- * It is impossible to query leads from another agency when using this layer,
- * as the underlying `getTenantPrisma` connection physically segregates Rows via Postgres RLS.
+ * Rule: NEVER calls prisma.lead.delete() — always soft-deletes via `deletedAt`.
  */
 export class LeadRepository {
     private db;
@@ -17,10 +16,10 @@ export class LeadRepository {
     }
 
     async findById(id: string) {
-        return this.db.lead.findUnique({
-            where: { id },
+        return this.db.lead.findFirst({
+            where: { id, deletedAt: null },
             include: {
-                notes: true,
+                notes: { where: { deletedAt: null } },
                 assignedTo: {
                     select: { id: true, email: true }
                 }
@@ -29,13 +28,11 @@ export class LeadRepository {
     }
 
     async findAll(args?: Prisma.LeadFindManyArgs) {
-        // By default, filter out soft-deleted leads unless specifically asked
         const queryArgs = args || {};
         queryArgs.where = {
             ...queryArgs.where,
-            isDeleted: false
+            deletedAt: null, // Always filter soft-deleted leads
         };
-
         return this.db.lead.findMany(queryArgs);
     }
 
@@ -50,12 +47,13 @@ export class LeadRepository {
         });
     }
 
-    async softDelete(id: string, auditUserId: string) {
+    /**
+     * Soft delete — sets deletedAt. NEVER physically removes the row.
+     */
+    async softDelete(id: string) {
         return this.db.lead.update({
             where: { id },
-            data: {
-                isDeleted: true,
-            }
+            data: { deletedAt: new Date() }
         });
     }
 }
