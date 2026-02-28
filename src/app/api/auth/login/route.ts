@@ -43,13 +43,11 @@ export async function POST(req: Request) {
             );
         }
 
-        // Compare provided password with stored hash
-        const isValidPassword = await bcrypt.compare(password, user.password);
-
-        if (!isValidPassword) {
+        // --- ACCOUNT LOCKOUT CHECK ---
+        if (user.lockUntil && user.lockUntil > new Date()) {
             return NextResponse.json(
-                { message: "Invalid email or password" },
-                { status: 401 }
+                { message: "Account locked due to too many failed attempts. Try again later." },
+                { status: 403 }
             );
         }
 
@@ -59,6 +57,56 @@ export async function POST(req: Request) {
                 { status: 403 }
             );
         }
+
+        // Compare provided password with stored hash
+        const isValidPassword = await bcrypt.compare(password, user.password);
+
+        if (!isValidPassword) {
+            // Increment failed attempts
+            const attempts = user.failedLoginAttempts + 1;
+            const lockUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    failedLoginAttempts: attempts,
+                    lockUntil: lockUntil,
+                },
+            });
+
+            return NextResponse.json(
+                { message: "Invalid email or password" },
+                { status: 401 }
+            );
+        }
+
+        // Reset failed attempts and track successful login
+        const userAgent = req.headers.get("user-agent") || "Unknown";
+
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    failedLoginAttempts: 0,
+                    lockUntil: null,
+                    lastLoginAt: new Date(),
+                },
+            }),
+            // Optional but highly recommended: strictly write AuditLog for the security event
+            ...(user.agencyId ? [
+                prisma.auditLog.create({
+                    data: {
+                        agencyId: user.agencyId,
+                        userId: user.id,
+                        action: "USER_LOGIN_SUCCESS",
+                        entityType: "User",
+                        entityId: user.id,
+                        ipAddress: ip,
+                        userAgent: userAgent,
+                    }
+                })
+            ] : []) // Cannot log agencyId if SUPER_ADMIN without an agency
+        ]);
 
         // Create short-lived JWT token (15 mins)
         const token = await signToken({
@@ -71,8 +119,7 @@ export async function POST(req: Request) {
         });
 
         // Create long-lived Refresh Token (7 days)
-        const userAgent = req.headers.get("user-agent") || "Unknown";
-        // ip is already defined above, so we reuse it.
+        // ip and userAgent are already defined above, so we reuse them.
         const refreshToken = await createSession(user.id, userAgent, ip);
 
         // Create response

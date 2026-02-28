@@ -33,14 +33,20 @@ model User {
   
   isActive  Boolean  @default(true)
   
+  failedLoginAttempts Int      @default(0)
+  lockUntil           DateTime?
+  lastLoginAt         DateTime?
+  
   sessions  Session[]
   auditLogs AuditLog[]
   
   assignedLeads Lead[] @relation("LeadAssignedTo")
   createdLeads  Lead[] @relation("LeadCreatedBy")
+  leadNotes     LeadNote[]
 
   @@index([agencyId])
   @@index([role])
+  @@index([agencyId, role])
 }
 
 model Agency {
@@ -50,14 +56,18 @@ model Agency {
   isActive         Boolean   @default(true)
   subscriptionPlan String    @default("FREE")
   subscriptionEnds DateTime?
+  planLimitUsers   Int       @default(5)
+  planLimitLeads   Int       @default(500)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 
   users            User[]
   leads            Lead[]
   clients          Client[]
   bookings         Booking[]
   auditLogs        AuditLog[]
+  leadNotes        LeadNote[]
 
   @@index([email])
   @@index([isActive])
@@ -85,10 +95,29 @@ model Lead {
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  isDeleted    Boolean    @default(false)
+  
+  notes        LeadNote[]
 
   @@index([agencyId, status])
   @@index([agencyId, assignedToId])
   @@index([agencyId, createdAt])
+}
+
+model LeadNote {
+  id          String   @id @default(uuid())
+  leadId      String
+  agencyId    String
+  createdById String
+  content     String
+  createdAt   DateTime @default(now())
+
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([leadId])
+  @@index([agencyId])
 }
 
 model AuditLog {
@@ -99,6 +128,8 @@ model AuditLog {
   entityType String
   entityId   String
   metadata   Json?
+  ipAddress  String?
+  userAgent  String?
   createdAt  DateTime @default(now())
 
   agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
@@ -106,6 +137,7 @@ model AuditLog {
 
   @@index([agencyId])
   @@index([userId])
+  @@index([entityType, entityId])
 }
 
 model Session {
