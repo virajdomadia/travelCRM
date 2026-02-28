@@ -38,8 +38,10 @@ export default function LoginPage() {
 
             if (data.role === "SUPER_ADMIN") {
                 router.push("/super-admin/agencies");
+            } else if (data.role === "AGENCY_ADMIN") {
+                router.push("/agency-admin");
             } else {
-                router.push("/dashboard");
+                router.push("/employee");
             }
         } catch (err: unknown) {
             if (err instanceof z.ZodError) {
