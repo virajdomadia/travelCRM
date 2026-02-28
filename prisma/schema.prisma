@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  AGENCY_ADMIN
+  AGENCY_EMPLOYEE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(AGENCY_EMPLOYEE)
+  createdAt DateTime @default(now())
+  
+  agencyId  String?
+  agency    Agency?  @relation(fields: [agencyId], references: [id])
+  leads     Lead[]
+}
+
+model Agency {
+  id               String    @id @default(uuid())
+  name             String
+  email            String?   @unique
+  isActive         Boolean   @default(true)
+  subscriptionPlan String    @default("FREE")
+  subscriptionEnds DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  users            User[]
+  leads            Lead[]
+}
+
+model Lead {
+  id           String     @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  status       LeadStatus @default(NEW)
+  
+  agencyId     String
+  agency       Agency     @relation(fields: [agencyId], references: [id])
+  
+  assignedToId String?
+  assignedTo   User?      @relation(fields: [assignedToId], references: [id])
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
