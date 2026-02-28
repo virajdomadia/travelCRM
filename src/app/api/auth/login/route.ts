@@ -15,8 +15,8 @@ export async function POST(req: Request) {
     try {
         const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
 
-        // 5 attempts per 15 minutes
-        if (!checkRateLimit(ip, 5, 15 * 60 * 1000)) {
+        // 5 attempts per 15 minutes, but skip in dev
+        if (process.env.NODE_ENV !== 'development' && !checkRateLimit(ip, 5, 15 * 60 * 1000)) {
             return NextResponse.json(
                 { message: "Too many login attempts. Please try again later." },
                 { status: 429 }

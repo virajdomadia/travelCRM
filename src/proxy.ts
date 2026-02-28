@@ -50,7 +50,7 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL("/login", request.url));
             }
             // Protect Agency APIs explicitly
-            if (pathname.startsWith("/api/agency") && payload.role !== Role.AGENCY_ADMIN) {
+            if (pathname.startsWith("/api/agency") && payload.role !== Role.AGENCY_ADMIN && payload.role !== Role.AGENCY_EMPLOYEE) {
                 return NextResponse.json({ message: "Forbidden" }, { status: 403 });
             }
             if (pathname.startsWith("/employee") && payload.role !== Role.AGENCY_EMPLOYEE) {

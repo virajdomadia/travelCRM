@@ -68,7 +68,7 @@ export default function SuperAdminAgenciesPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0a14] text-white p-8">
+        <div>
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -193,8 +193,8 @@ export default function SuperAdminAgenciesPage() {
                                                     onClick={() => handleToggle(agency.id, agency.isActive)}
                                                     disabled={togglingId === agency.id}
                                                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors disabled:opacity-50 ${agency.isActive
-                                                            ? "bg-red-950/50 border-red-900/50 hover:bg-red-900/50 text-red-400"
-                                                            : "bg-emerald-950/50 border-emerald-900/50 hover:bg-emerald-900/50 text-emerald-400"
+                                                        ? "bg-red-950/50 border-red-900/50 hover:bg-red-900/50 text-red-400"
+                                                        : "bg-emerald-950/50 border-emerald-900/50 hover:bg-emerald-900/50 text-emerald-400"
                                                         }`}
                                                 >
                                                     {togglingId === agency.id ? "..." : agency.isActive ? "Deactivate" : "Activate"}
