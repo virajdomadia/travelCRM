@@ -42,6 +42,8 @@ export default function LoginPage() {
 
             if (callbackUrl && callbackUrl.startsWith("/")) {
                 router.push(callbackUrl);
+            } else if (data.role === "SUPER_ADMIN") {
+                router.push("/super-admin/agencies");
             } else {
                 router.push("/dashboard");
             }
