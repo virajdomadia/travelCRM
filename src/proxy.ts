@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { Role } from "@/lib/roles";
 
 // Paths that require JWT authentication and header injection
-const protectedPaths = ["/dashboard", "/super-admin", "/api/super-admin", "/agency-admin", "/employee"];
+const protectedPaths = ["/dashboard", "/super-admin", "/api/super-admin", "/agency-admin", "/api/agency", "/employee"];
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -48,6 +48,10 @@ export async function proxy(request: NextRequest) {
             }
             if (pathname.startsWith("/agency-admin") && payload.role !== Role.AGENCY_ADMIN) {
                 return NextResponse.redirect(new URL("/login", request.url));
+            }
+            // Protect Agency APIs explicitly
+            if (pathname.startsWith("/api/agency") && payload.role !== Role.AGENCY_ADMIN) {
+                return NextResponse.json({ message: "Forbidden" }, { status: 403 });
             }
             if (pathname.startsWith("/employee") && payload.role !== Role.AGENCY_EMPLOYEE) {
                 return NextResponse.redirect(new URL("/login", request.url));

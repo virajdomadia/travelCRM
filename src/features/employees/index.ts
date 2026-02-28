@@ -1,2 +1,1 @@
-// Employees feature barrel — export employee-related components, hooks, and types here
-export { };
+export { EmployeeList } from "./components/EmployeeList";

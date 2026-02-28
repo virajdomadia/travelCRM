@@ -17,13 +17,17 @@ export async function GET() {
             where: { email: "admin@travelos.com" }
         });
 
-        if (existingUser) {
-            return NextResponse.json({ message: "Test user already exists" });
-        }
-
-        const devPassword = process.env.DEV_ADMIN_PASSWORD || crypto.randomUUID();
+        const devPassword = process.env.DEV_ADMIN_PASSWORD || "Admin@1234";
         console.log(`[SETUP] SUPER_ADMIN Password: ${devPassword}`);
         const hashedPassword = await bcrypt.hash(devPassword, 10);
+
+        if (existingUser) {
+            await prisma.user.update({
+                where: { email: "admin@travelos.com" },
+                data: { password: hashedPassword, role: "SUPER_ADMIN", failedLoginAttempts: 0, lockUntil: null }
+            });
+            return NextResponse.json({ message: "Test user updated successfully" });
+        }
 
         const user = await prisma.user.create({
             data: {
