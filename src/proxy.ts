@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { Role } from "@/lib/roles";
 
-// Add paths that require authentication here
-const protectedPaths = ["/dashboard", "/super-admin"];
+// Paths that require JWT authentication and header injection
+const protectedPaths = ["/dashboard", "/super-admin", "/api/super-admin"];
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -128,12 +128,15 @@ export async function proxy(request: NextRequest) {
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
+         * Match all request paths EXCEPT:
          * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         * - _next/image (image optimization)
+         * - favicon.ico, sitemap.xml, robots.txt
+         *
+         * NOTE: /api/super-admin/* IS included so JWT is verified
+         * and x-user-role headers are set before the API handler runs.
+         * Public auth API routes (/api/auth/*) and /api/setup are excluded.
          */
-        "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+        "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/auth|api/setup).*)",
     ],
 };
