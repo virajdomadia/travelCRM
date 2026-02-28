@@ -24,12 +24,14 @@ export default function LeadFormModal({ lead, employees, onClose, onSuccess }: P
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const defaultAssignedToId = employees.length === 1 ? employees[0].id : "";
+
     const [formData, setFormData] = useState({
         name: lead?.name || "",
         email: lead?.email || "",
         phone: lead?.phone || "",
         source: lead?.source || "",
-        assignedToId: lead?.assignedToId || "",
+        assignedToId: lead?.assignedToId || defaultAssignedToId,
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

@@ -9,9 +9,9 @@ export default async function AgencyAdminLayout({ children }: { children: React.
     const role = headersList.get("x-user-role") || "AGENCY_ADMIN"; // Fallback to assumed role
 
     return (
-        <div className="min-h-screen bg-gray-950 flex">
+        <div className="min-h-screen bg-gray-950 flex overflow-hidden">
             <Sidebar role={role} />
-            <main className="flex-1 ml-64 p-8">
+            <main className="flex-1 ml-64 p-8 w-[calc(100vw-16rem)] min-w-0 overflow-y-auto h-screen">
                 {children}
             </main>
         </div>

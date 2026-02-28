@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Filter, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Filter, Loader2, LayoutList, LayoutGrid } from "lucide-react";
 import LeadFormModal from "./LeadFormModal";
 import LeadDetailPanel from "./LeadDetailPanel";
+import { KanbanBoard } from "./KanbanBoard";
 import { LeadStatus } from "@prisma/client";
 
 interface Lead {
@@ -28,7 +29,9 @@ export function LeadList() {
     const [totalPages, setTotalPages] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
     const [sourceFilter, setSourceFilter] = useState("");
-    const [assignedFilter, setAssignedFilter] = useState("");
+    const assignedFilter = ""; // kept for API params, removing setter since it wasn't used in UI
+
+    const [viewMode, setViewMode] = useState<"list" | "board">("board");
 
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -37,13 +40,15 @@ export function LeadList() {
     const fetchLeads = useCallback(async () => {
         try {
             setIsLoading(true);
-            const params = new URLSearchParams({
+            const paramsObj: Record<string, string> = {
                 page: page.toString(),
                 limit: limit.toString(),
-                ...(statusFilter && { status: statusFilter }),
-                ...(sourceFilter && { source: sourceFilter }),
-                ...(assignedFilter && { assignedToId: assignedFilter }),
-            });
+            };
+            if (statusFilter) paramsObj.status = statusFilter;
+            if (sourceFilter) paramsObj.source = sourceFilter;
+            if (assignedFilter) paramsObj.assignedToId = assignedFilter;
+
+            const params = new URLSearchParams(paramsObj);
 
             const res = await fetch(`/api/agency/leads?${params.toString()}`);
             if (res.ok) {
@@ -78,8 +83,30 @@ export function LeadList() {
         fetchLeads();
     }, [fetchLeads]);
 
+    const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
+        try {
+            const res = await fetch(`/api/agency/leads/${leadId}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.message || "Failed to update status");
+            }
+
+            // Successfully updated on server, refresh leads
+            fetchLeads();
+        } catch (error) {
+            console.error(error);
+            // Throw error so KanbanBoard can revert optimistic UI
+            throw error;
+        }
+    };
+
     return (
-        <div>
+        <div className="w-full flex flex-col flex-1 min-w-0">
             {/* Header / Actions */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h2 className="text-xl font-semibold text-white">Lead Pipeline</h2>
@@ -111,6 +138,24 @@ export function LeadList() {
                         </select>
                     </div>
 
+                    {/* View Toggle */}
+                    <div className="flex bg-gray-900 border border-gray-800 rounded-lg p-1 mr-2">
+                        <button
+                            onClick={() => setViewMode("list")}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-gray-800 text-white" : "text-gray-500 hover:text-gray-300"}`}
+                            title="List View"
+                        >
+                            <LayoutList className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode("board")}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === "board" ? "bg-gray-800 text-white" : "text-gray-500 hover:text-gray-300"}`}
+                            title="Board View"
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                        </button>
+                    </div>
+
                     {/* Add Lead Button */}
                     <button
                         onClick={() => setIsFormOpen(true)}
@@ -122,13 +167,21 @@ export function LeadList() {
                 </div>
             </div>
 
-            {/* Table Area */}
-            <div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900/50">
-                {isLoading ? (
-                    <div className="flex justify-center items-center py-20">
-                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                    </div>
-                ) : (
+            {/* Content Area */}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20 border border-gray-800 bg-gray-900/50 rounded-xl">
+                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                </div>
+            ) : viewMode === "board" ? (
+                <div className="w-full h-full">
+                    <KanbanBoard
+                        leads={leads}
+                        onLeadClick={(id) => setViewingLeadId(id)}
+                        onStatusChange={handleStatusChange}
+                    />
+                </div>
+            ) : (
+                <div className="w-full overflow-x-auto rounded-xl border border-gray-800 bg-gray-900/50">
                     <table className="w-full text-sm text-left text-gray-400">
                         <thead className="text-xs text-gray-300 uppercase bg-gray-800/80 border-b border-gray-700">
                             <tr>
@@ -182,8 +235,8 @@ export function LeadList() {
                             )}
                         </tbody>
                     </table>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && !isLoading && (
