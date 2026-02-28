@@ -36,13 +36,7 @@ export default function LoginPage() {
                 throw new Error(data.message || "Something went wrong");
             }
 
-            // Check for callbackUrl in the query parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const callbackUrl = urlParams.get("callbackUrl");
-
-            if (callbackUrl && callbackUrl.startsWith("/")) {
-                router.push(callbackUrl);
-            } else if (data.role === "SUPER_ADMIN") {
+            if (data.role === "SUPER_ADMIN") {
                 router.push("/super-admin/agencies");
             } else {
                 router.push("/dashboard");
