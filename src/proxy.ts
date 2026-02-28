@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/auth";
 import { Role } from "@/lib/roles";
 
 // Paths that require JWT authentication and header injection
-const protectedPaths = ["/dashboard", "/super-admin", "/api/super-admin"];
+const protectedPaths = ["/dashboard", "/super-admin", "/api/super-admin", "/agency-admin", "/employee"];
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -42,10 +42,15 @@ export async function proxy(request: NextRequest) {
                 throw new Error("Invalid token");
             }
 
-            // Check role-based access for super-admin routes
+            // --- STRICT ROLE-BASED ROUTING ENFORCEMENT ---
             if (pathname.startsWith("/super-admin") && payload.role !== Role.SUPER_ADMIN) {
-                // Regular users trying to access super-admin area get redirected to dashboard
-                return NextResponse.redirect(new URL("/dashboard", request.url));
+                return NextResponse.redirect(new URL("/login", request.url));
+            }
+            if (pathname.startsWith("/agency-admin") && payload.role !== Role.AGENCY_ADMIN) {
+                return NextResponse.redirect(new URL("/login", request.url));
+            }
+            if (pathname.startsWith("/employee") && payload.role !== Role.AGENCY_EMPLOYEE) {
+                return NextResponse.redirect(new URL("/login", request.url));
             }
 
             // --- USER ACCOUNT & TENANT & SUBSCRIPTION ENFORCEMENT ---
@@ -109,9 +114,12 @@ export async function proxy(request: NextRequest) {
                 if (payload) {
                     // Send them to the right dashboard based on role
                     if (payload.role === Role.SUPER_ADMIN) {
-                        return NextResponse.redirect(new URL("/super-admin", request.url));
+                        return NextResponse.redirect(new URL("/super-admin/agencies", request.url));
                     }
-                    return NextResponse.redirect(new URL("/dashboard", request.url));
+                    if (payload.role === Role.AGENCY_ADMIN) {
+                        return NextResponse.redirect(new URL("/agency-admin", request.url));
+                    }
+                    return NextResponse.redirect(new URL("/employee", request.url));
                 }
             } catch (e) {
                 // Token invalid, let them stay on login page
