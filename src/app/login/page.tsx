@@ -45,8 +45,6 @@ export default function LoginPage() {
             } else {
                 router.push("/dashboard");
             }
-
-            router.refresh();
         } catch (err: unknown) {
             if (err instanceof z.ZodError) {
                 setError(err.issues[0].message);

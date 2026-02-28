@@ -5,6 +5,10 @@ import prisma from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { signToken } from "@/lib/auth";
 
+// Use a constant dummy hash to mitigate timing-based enumeration attacks when user is not found.
+// This is the result of bcrypt.hash("dummy", 10).
+const DUMMY_PASSWORD_HASH = "$2b$10$U.2TjU5A1vGXYl9iWp0x2e0.gNxtiH/P2e2S1xYXg5S2T2vT9wZ/G";
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -19,8 +23,7 @@ export async function POST(req: Request) {
 
         if (!user) {
             // Run a dummy compare to protect against timing attacks
-            // This hash is just bcrypt.hash("dummy", 10)
-            await bcrypt.compare(password, "$2b$10$U.2TjU5A1vGXYl9iWp0x2e0.gNxtiH/P2e2S1xYXg5S2T2vT9wZ/G");
+            await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
             return NextResponse.json(
                 { message: "Invalid email or password" },
                 { status: 401 }

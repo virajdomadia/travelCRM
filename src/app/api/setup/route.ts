@@ -4,10 +4,10 @@ import prisma from "@/lib/prisma";
 
 // Temporary endpoint to create an initial test user (Development only)
 export async function GET() {
-    // Security check: Only allow in development mode
-    if (process.env.NODE_ENV !== "development") {
+    // Security check: Only allow in development mode explicitly with an extra env flag
+    if (process.env.NODE_ENV !== "development" || process.env.ALLOW_DEV_SETUP !== "true") {
         return NextResponse.json(
-            { message: "Setup endpoint is only available in development environment." },
+            { message: "Setup endpoint is disabled or not in development environment." },
             { status: 403 }
         );
     }
