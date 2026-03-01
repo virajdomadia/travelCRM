@@ -6,6 +6,196 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id                  String     @id @default(uuid())
+  email               String     @unique
+  password            String
+  createdAt           DateTime   @default(now())
+  agencyId            String?
+  role                Role       @default(AGENCY_EMPLOYEE)
+  isActive            Boolean    @default(true)
+  failedLoginAttempts Int        @default(0)
+  lastLoginAt         DateTime?
+  lockUntil           DateTime?
+  deletedAt           DateTime?
+  auditLogs           AuditLog[]
+  assignedLeads       Lead[]     @relation("LeadAssignedTo")
+  createdLeads        Lead[]     @relation("LeadCreatedBy")
+  leadNotes           LeadNote[]
+  sessions            Session[]
+  agency              Agency?    @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+  @@index([role])
+  @@index([agencyId, role])
+}
+
+model Agency {
+  id                 String              @id @default(uuid())
+  name               String
+  email              String?             @unique
+  isActive           Boolean             @default(true)
+  subscriptionPlan   String              @default("FREE")
+  subscriptionEnds   DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  planLimitLeads     Int                 @default(500)
+  planLimitUsers     Int                 @default(5)
+  auditLogs          AuditLog[]
+  bookings           Booking[]
+  clients            Client[]
+  leads              Lead[]
+  leadNotes          LeadNote[]
+  quotations         Quotation[]
+  quotationLineItems QuotationLineItem[]
+  users              User[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([subscriptionEnds])
+}
+
+model Lead {
+  id           String      @id @default(uuid())
+  email        String?
+  phone        String?
+  status       LeadStatus  @default(NEW)
+  agencyId     String
+  assignedToId String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  createdById  String?
+  followUpDate DateTime?
+  name         String
+  source       String?
+  deletedAt    DateTime?
+  agency       Agency      @relation(fields: [agencyId], references: [id])
+  assignedTo   User?       @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?       @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  notes        LeadNote[]
+  quotations   Quotation[]
+
+  @@index([agencyId, status])
+  @@index([agencyId, assignedToId])
+  @@index([agencyId, createdAt])
+}
+
+model LeadNote {
+  id          String    @id @default(uuid())
+  leadId      String
+  agencyId    String
+  createdById String
+  content     String
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+  agency      Agency    @relation(fields: [agencyId], references: [id])
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  lead        Lead      @relation(fields: [leadId], references: [id])
+
+  @@index([leadId])
+  @@index([agencyId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  agencyId   String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+  agency     Agency   @relation(fields: [agencyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([agencyId])
+  @@index([userId])
+  @@index([agencyId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  hashedToken String   @unique
+  familyId    String
+  isRevoked   Boolean  @default(false)
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Client {
+  id        String    @id @default(uuid())
+  name      String
+  agencyId  String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  agency    Agency    @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+}
+
+model Booking {
+  id        String    @id @default(uuid())
+  title     String
+  agencyId  String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  agency    Agency    @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+}
+
+model Quotation {
+  id                 String              @id @default(uuid())
+  leadId             String
+  agencyId           String
+  version            Int
+  isLatest           Boolean             @default(true)
+  totalAmount        Int
+  currency           String              @default("INR")
+  status             QuotationStatus     @default(DRAFT)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  agencyNameSnapshot String?
+  leadNameSnapshot   String?
+  pdfUrl             String?
+  profit             Int?
+  totalCost          Int?
+  totalRevenue       Int?
+  validUntil         DateTime?
+  agency             Agency              @relation(fields: [agencyId], references: [id])
+  lead               Lead                @relation(fields: [leadId], references: [id])
+  lineItems          QuotationLineItem[]
+
+  @@index([agencyId, leadId])
+  @@index([agencyId, createdAt])
+}
+
+model QuotationLineItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  agencyId    String
+  name        String
+  cost        Int
+  margin      Int
+  finalAmount Int
+  agency      Agency    @relation(fields: [agencyId], references: [id])
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+  @@index([agencyId])
+}
+
 enum Role {
   SUPER_ADMIN
   AGENCY_ADMIN
@@ -21,164 +211,9 @@ enum LeadStatus {
   LOST
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(AGENCY_EMPLOYEE)
-  createdAt DateTime @default(now())
-  
-  agencyId  String?
-  agency    Agency?  @relation(fields: [agencyId], references: [id])
-  
-  isActive  Boolean  @default(true)
-  
-  failedLoginAttempts Int      @default(0)
-  lockUntil           DateTime?
-  lastLoginAt         DateTime?
-  deletedAt           DateTime?
-  
-  sessions  Session[]
-  auditLogs AuditLog[]
-  
-  assignedLeads Lead[] @relation("LeadAssignedTo")
-  createdLeads  Lead[] @relation("LeadCreatedBy")
-  leadNotes     LeadNote[]
-
-  @@index([agencyId])
-  @@index([role])
-  @@index([agencyId, role])
-}
-
-model Agency {
-  id               String    @id @default(uuid())
-  name             String
-  email            String?   @unique
-  isActive         Boolean   @default(true)
-  subscriptionPlan String    @default("FREE")
-  subscriptionEnds DateTime?
-  planLimitUsers   Int       @default(5)
-  planLimitLeads   Int       @default(500)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
-
-  users            User[]
-  leads            Lead[]
-  clients          Client[]
-  bookings         Booking[]
-  auditLogs        AuditLog[]
-  leadNotes        LeadNote[]
-
-  @@index([email])
-  @@index([isActive])
-  @@index([subscriptionEnds])
-}
-
-model Lead {
-  id           String     @id @default(uuid())
-  name         String
-  phone        String?
-  email        String?
-  source       String?
-  status       LeadStatus @default(NEW)
-  
-  agencyId     String
-  agency       Agency     @relation(fields: [agencyId], references: [id], onDelete: Restrict)
-  
-  assignedToId String?
-  assignedTo   User?      @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
-  
-  createdById  String?
-  createdBy    User?      @relation("LeadCreatedBy", fields: [createdById], references: [id])
-
-  followUpDate DateTime?
-
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  deletedAt    DateTime?
-  
-  notes        LeadNote[]
-
-  @@index([agencyId, status])
-  @@index([agencyId, assignedToId])
-  @@index([agencyId, createdAt])
-}
-
-model LeadNote {
-  id          String   @id @default(uuid())
-  leadId      String
-  agencyId    String
-  createdById String
-  content     String
-  createdAt   DateTime @default(now())
-  deletedAt   DateTime?
-
-  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Restrict)
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
-  createdBy   User     @relation(fields: [createdById], references: [id])
-
-  @@index([leadId])
-  @@index([agencyId])
-}
-
-model AuditLog {
-  id         String   @id @default(uuid())
-  agencyId   String
-  userId     String
-  action     String
-  entityType String
-  entityId   String
-  metadata   Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-
-  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  @@index([agencyId])
-  @@index([userId])
-  @@index([agencyId, createdAt])
-  @@index([entityType, entityId])
-}
-
-model Session {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hashedToken String   @unique
-  familyId    String
-  isRevoked   Boolean  @default(false)
-  userAgent   String?
-  ipAddress   String?
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
-  @@index([familyId])
-}
-
-model Client {
-  id        String   @id @default(uuid())
-  name      String
-  
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
-
-  @@index([agencyId])
-}
-
-model Booking {
-  id        String   @id @default(uuid())
-  title     String
-  
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
-
-  @@index([agencyId])
+enum QuotationStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
 }
