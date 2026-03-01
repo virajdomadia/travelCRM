@@ -144,8 +144,8 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
                             onClick={handleToggle}
                             disabled={toggling}
                             className={`px-4 py-2 text-sm rounded-xl border font-medium transition-all disabled:opacity-50 ${agency.isActive
-                                    ? "bg-red-950/50 border-red-900/50 hover:bg-red-900/50 text-red-400"
-                                    : "bg-emerald-950/50 border-emerald-900/50 hover:bg-emerald-900/50 text-emerald-400"
+                                ? "bg-red-950/50 border-red-900/50 hover:bg-red-900/50 text-red-400"
+                                : "bg-emerald-950/50 border-emerald-900/50 hover:bg-emerald-900/50 text-emerald-400"
                                 }`}
                         >
                             {toggling ? "Updating..." : agency.isActive ? "Deactivate Agency" : "Activate Agency"}
@@ -201,8 +201,8 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
                                     type="button"
                                     onClick={() => setForm((f) => ({ ...f, subscriptionPlan: plan }))}
                                     className={`py-2 text-xs font-medium rounded-xl border transition-all ${form.subscriptionPlan === plan
-                                            ? "bg-violet-600/30 border-violet-500/60 text-violet-300"
-                                            : "bg-white/5 border-white/10 text-slate-400 hover:border-white/20"
+                                        ? "bg-violet-600/30 border-violet-500/60 text-violet-300"
+                                        : "bg-white/5 border-white/10 text-slate-400 hover:border-white/20"
                                         }`}
                                 >
                                     {plan}
@@ -270,9 +270,19 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
                                             Last login: {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}
                                         </p>
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded-md ${u.isActive ? "bg-emerald-900/30 text-emerald-400" : "bg-slate-800 text-slate-500"}`}>
-                                        {u.isActive ? "Active" : "Inactive"}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-xs px-2 py-1 rounded-md ${u.isActive ? "bg-emerald-900/30 text-emerald-400" : "bg-slate-800 text-slate-500"}`}>
+                                            {u.isActive ? "Active" : "Inactive"}
+                                        </span>
+                                        {u.isActive && (
+                                            <Link
+                                                href={`/api/super-admin/impersonate?userId=${u.id}`}
+                                                className="px-3 py-1 text-[10px] uppercase tracking-wider font-bold bg-violet-600/20 text-violet-400 border border-violet-500/30 rounded-lg hover:bg-violet-600/40 hover:text-white transition-all shadow-lg shadow-violet-900/10"
+                                            >
+                                                Impersonate
+                                            </Link>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>

@@ -7,7 +7,8 @@ import {
     Users,
     UserCircle,
     LogOut,
-    Briefcase
+    Briefcase,
+    ShoppingBag
 } from "lucide-react";
 
 export function Sidebar({ role }: { role: string }) {
@@ -35,12 +36,14 @@ export function Sidebar({ role }: { role: string }) {
         navItems.push(
             { href: "/agency-admin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/agency-admin/employees", label: "Team Members", icon: Users },
-            { href: "/agency-admin/leads", label: "Leads", icon: UserCircle }
+            { href: "/agency-admin/leads", label: "Leads", icon: UserCircle },
+            { href: "/agency-admin/bookings", label: "Bookings", icon: ShoppingBag }
         );
     } else if (role === "AGENCY_EMPLOYEE") {
         navItems.push(
             { href: "/employee", label: "Dashboard", icon: LayoutDashboard },
-            { href: "/employee/leads", label: "My Leads", icon: UserCircle }
+            { href: "/employee/leads", label: "My Leads", icon: UserCircle },
+            { href: "/employee/bookings", label: "My Bookings", icon: ShoppingBag }
         );
     }
 

@@ -40,7 +40,8 @@ const COLUMNS: LeadStatus[] = [
     LeadStatus.QUALIFIED,
     LeadStatus.PROPOSAL,
     LeadStatus.WON,
-    LeadStatus.LOST
+    LeadStatus.LOST,
+    LeadStatus.BOOKED
 ];
 
 export function KanbanBoard({ leads: initialLeads, onLeadClick, onStatusChange }: KanbanBoardProps) {

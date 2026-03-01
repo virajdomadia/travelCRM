@@ -15,6 +15,7 @@ export interface JwtPayload {
     agencyId?: string;
     agencyIsActive?: boolean;
     subscriptionEnds?: string | null;
+    originalUserId?: string; // ID of the Super Admin who is impersonating
 }
 
 export async function signToken(payload: JwtPayload): Promise<string> {

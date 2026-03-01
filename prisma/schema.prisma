@@ -50,6 +50,7 @@ model Agency {
   quotations         Quotation[]
   quotationLineItems QuotationLineItem[]
   users              User[]
+  payments           Payment[]
 
   @@index([email])
   @@index([isActive])
@@ -75,10 +76,12 @@ model Lead {
   createdBy    User?       @relation("LeadCreatedBy", fields: [createdById], references: [id])
   notes        LeadNote[]
   quotations   Quotation[]
+  bookings     Booking[]
 
   @@index([agencyId, status])
   @@index([agencyId, assignedToId])
   @@index([agencyId, createdAt])
+  @@index([agencyId, followUpDate])
 }
 
 model LeadNote {
@@ -145,14 +148,24 @@ model Client {
 }
 
 model Booking {
-  id        String    @id @default(uuid())
-  title     String
-  agencyId  String
-  createdAt DateTime  @default(now())
-  deletedAt DateTime?
-  agency    Agency    @relation(fields: [agencyId], references: [id])
+  id          String    @id @default(uuid())
+  title       String
+  agencyId    String
+  leadId      String
+  quotationId String    @unique
+  totalAmount Int
+  currency    String    @default("INR")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  agency      Agency    @relation(fields: [agencyId], references: [id])
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  payments    Payment[]
 
   @@index([agencyId])
+  @@index([leadId])
+  @@index([agencyId, createdAt])
 }
 
 model Quotation {
@@ -176,6 +189,7 @@ model Quotation {
   agency             Agency              @relation(fields: [agencyId], references: [id])
   lead               Lead                @relation(fields: [leadId], references: [id])
   lineItems          QuotationLineItem[]
+  booking            Booking?
 
   @@index([agencyId, leadId])
   @@index([agencyId, createdAt])
@@ -196,6 +210,29 @@ model QuotationLineItem {
   @@index([agencyId])
 }
 
+model Payment {
+  id            String        @id @default(uuid())
+  bookingId     String
+  agencyId      String
+  paymentAmount Int
+  paymentDate   DateTime      @default(now())
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  agency        Agency        @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId, bookingId])
+  @@index([agencyId, status, paymentDate])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 enum Role {
   SUPER_ADMIN
   AGENCY_ADMIN
@@ -209,6 +246,7 @@ enum LeadStatus {
   PROPOSAL
   WON
   LOST
+  BOOKED
 }
 
 enum QuotationStatus {

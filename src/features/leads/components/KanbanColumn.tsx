@@ -28,6 +28,7 @@ const statusColors: Record<LeadStatus, string> = {
     PROPOSAL: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     WON: "bg-green-500/10 text-green-400 border-green-500/20",
     LOST: "bg-red-500/10 text-red-400 border-red-500/20",
+    BOOKED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 
 export function KanbanColumn({ status, leads, onLeadClick }: KanbanColumnProps) {

@@ -70,12 +70,12 @@ export async function proxy(request: NextRequest) {
                     return NextResponse.redirect(new URL("/login?error=account_suspended", request.url));
                 }
 
-                // 2. Check subscription validity
-                if (payload.subscriptionEnds) {
+                // 2. Check subscription validity (Exempt SUPER_ADMIN)
+                if (payload.role !== Role.SUPER_ADMIN && payload.subscriptionEnds) {
                     const subEnds = new Date(payload.subscriptionEnds);
-                    if (subEnds < new Date() && !pathname.startsWith("/billing")) {
-                        // Redirect to a billing portal/renewal page to prevent full access
-                        return NextResponse.redirect(new URL("/billing", request.url));
+                    if (subEnds < new Date() && !pathname.startsWith("/agency-admin/expired")) {
+                        // Redirect to a dedicated expired page
+                        return NextResponse.redirect(new URL("/agency-admin/expired", request.url));
                     }
                 }
             }
